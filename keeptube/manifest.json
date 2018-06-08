@@ -1,0 +1,15 @@
+{
+
+  "description": "Download video or playlist in either mp3 or mp4 format form YouTube",
+  "manifest_version": 2,
+  "name": "KeepTube",
+  "version": "1.0",
+
+  "content_scripts": [
+    {
+      "matches": ["http?://www.youtube.com/watch?v=*"],
+      "js": ["download.js"]
+    }
+  ]
+
+}

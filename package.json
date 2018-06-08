@@ -1,0 +1,15 @@
+{
+  "name": "plugins",
+  "version": "1.0.0",
+  "description": "Mozilla web extension for videos",
+  "main": "download.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pranay Pant",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^5.1.2",
+    "ytdl-core": "^0.20.2"
+  }
+}
