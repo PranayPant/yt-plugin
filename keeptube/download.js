@@ -1,6 +1,8 @@
 const CB_URL = "https://localhost:3000/"
 const HREF 	 = window.location.href
 const YT_BASE_URL = "https://www.youtube.com/watch?v="
+const LIST_AFFIX  = "&list="
+const VIDEO_AFFIX = "?v="
 
 const div   = document.getElementById( "info-contents" )
 const title = document.querySelector( "h1.title" ).textContent
@@ -26,6 +28,39 @@ function appendImg( href, title ) {
 	return img
 }
 
+function isPlaylist( href ) {
+
+	return href.includes( LIST_AFFIX )
+}
+
+function isMixedList( href ) {
+
+	return href.includes( LIST_AFFIX ) && href.includes( VIDEO_AFFIX )
+}
+
+function getId( href ) {
+
+	let id = ""
+
+	if( isPlaylist( href ) ) {
+		if( isMixedList( href ) ) {
+			id = "#wc-endpoint"
+		}
+		else {
+			id = "#thumbnail"
+		}
+	}
+
+	return id
+}
+
+function getListHREFNodes( href ) {
+
+	let id = getId( href )
+
+	return document.querySelectorAll( id )
+}
+
 window.download = function( href, title ) {
 
 	div.appendChild( appendProgressBar() )
@@ -37,7 +72,27 @@ window.download = function( href, title ) {
 	ws.addEventListener( 'open', () => {
 		console.log( "connected!" )
 
-		ws.send( href )
+		if( !isPlaylist( href ) ) {
+
+			ws.send( href )
+		}
+		else {
+
+			let hrefNodes = getListHREFNodes( href )
+			let hrefs = []
+
+			hrefNodes.forEach( ( node, index ) => {
+				let substr = node.href.split("?v=")[1]
+				substr = substr.split("&list=")[0]
+				hrefs.push( substr )
+			})
+
+			console.log(hrefs)
+
+			hrefs.forEach( ( href ) => {
+				ws.send( href )
+			})
+		}
 	})
 
 	ws.addEventListener( 'message', ( message ) => {
@@ -78,6 +133,7 @@ window.download = function( href, title ) {
   			element.click()
 
   			document.body.removeChild( element )
+
 		}
 		else {
 			alert( 'Sorry, an internal error occured while downloading the video.' )
