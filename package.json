@@ -9,6 +9,7 @@
   "author": "Pranay Pant",
   "license": "ISC",
   "dependencies": {
+    "request": "^2.87.0",
     "ws": "^5.1.2",
     "ytdl-core": "^0.20.2"
   }

@@ -1,17 +1,41 @@
-const CB_URL = "https://localhost:3000/"
-const HREF 	 = window.location.href
-const YT_BASE_URL = "https://www.youtube.com/watch?v="
-const LIST_AFFIX  = "&list="
-const VIDEO_AFFIX = "?v="
 
-const div   = document.getElementById( "info-contents" )
-const title = document.querySelector( "h1.title" ).textContent
-const referenceNode = div.children.item(0)
+const CB_URL 		= "https://localhost:3000/"
+const LOCATION    = window.location.href
+const YT_BASE_URL = "https://www.youtube.com/watch"
+const LIST_AFFIX  = "list="
+const VIDEO_AFFIX = "v="
 
-div.style.border   = "5px solid red"
-div.style.position = "relative"
+const IMG_DIV_SELECTOR 		 = "#info-contents"
+const IMG_STYLE 			 	 = "position:absolute;left:30%;bottom:10%;width:5%;height:40%"
+const LIST_IMG_STYLE 	  	 = "width:10%;height:90%;margin-right:7%;margin-left:3%"
+const LIST_IMG_DIV_SELECTOR = "#top-level-buttons"
+const LIST_CONTENT_SELECTOR = "div#contents.ytd-playlist-video-list-renderer a.ytd-playlist-video-renderer"
 
-div.insertBefore( appendImg( HREF.split( YT_BASE_URL )[1], title ), referenceNode );
+const imgDivSelector = getImgDivSelector()
+const imgDiv   		= document.querySelector( imgDivSelector )
+const title 			= document.querySelector( "h1.title" ).textContent
+const img   			= appendImg( LOCATION.split( YT_BASE_URL )[1], title )
+const referenceNode  = imgDiv.children.item(0)
+
+imgDiv.style.border   = "5px solid red"
+imgDiv.style.position = "relative"
+
+imgDiv.insertBefore( img, referenceNode )
+
+function isPlaylistPage() {
+
+	return LOCATION.includes(LIST_AFFIX) && !LOCATION.includes(VIDEO_AFFIX)
+}
+
+function getImgDivSelector() {
+
+	return ( isPlaylistPage() ) ? LIST_IMG_DIV_SELECTOR : IMG_DIV_SELECTOR
+}
+
+function getImgStyle() {
+
+	return ( isPlaylistPage() ) ? LIST_IMG_STYLE : IMG_STYLE
+}
 
 function appendImg( href, title ) {
 
@@ -20,7 +44,7 @@ function appendImg( href, title ) {
 	img.id = 'download-icon'
 	img.alt = "Download mp4"
 
-	img.style = "position:absolute;left:30%;bottom:10%;width:5%;height:40%"
+	img.style = getImgStyle()
 	
 	img.src = CB_URL + "ICON"
 	img.addEventListener( 'click', () => download( href, title )  )
@@ -33,66 +57,36 @@ function isPlaylist( href ) {
 	return href.includes( LIST_AFFIX )
 }
 
-function isMixedList( href ) {
+function getListHREFs( href ) {
 
-	return href.includes( LIST_AFFIX ) && href.includes( VIDEO_AFFIX )
-}
+	let nodes = document.querySelectorAll( LIST_CONTENT_SELECTOR )
+	let hrefs = Array.from(nodes).map( link => link.href )
 
-function getId( href ) {
-
-	let id = ""
-
-	if( isPlaylist( href ) ) {
-		if( isMixedList( href ) ) {
-			id = "#wc-endpoint"
-		}
-		else {
-			id = "#thumbnail"
-		}
-	}
-
-	return id
-}
-
-function getListHREFNodes( href ) {
-
-	let id = getId( href )
-
-	return document.querySelectorAll( id )
+	return hrefs
 }
 
 window.download = function( href, title ) {
 
-	div.appendChild( appendProgressBar() )
+	imgDiv.appendChild( appendProgressBar() )
 
 	const ws = new WebSocket( "wss://localhost:3000" )
 
 	let buf = []
+	let hrefs = []
 
 	ws.addEventListener( 'open', () => {
 		console.log( "connected!" )
 
 		if( !isPlaylist( href ) ) {
 
-			ws.send( href )
+			hrefs.push( href )
 		}
 		else {
 
-			let hrefNodes = getListHREFNodes( href )
-			let hrefs = []
-
-			hrefNodes.forEach( ( node, index ) => {
-				let substr = node.href.split("?v=")[1]
-				substr = substr.split("&list=")[0]
-				hrefs.push( substr )
-			})
-
-			console.log(hrefs)
-
-			hrefs.forEach( ( href ) => {
-				ws.send( href )
-			})
+			hrefs = getListHREFs( href )
 		}
+
+		ws.send( links[0] )
 	})
 
 	ws.addEventListener( 'message', ( message ) => {
@@ -116,9 +110,19 @@ window.download = function( href, title ) {
 
 	})
 
-	ws.addEventListener( 'close', () => {
+	ws.addEventListener( 'close', ( closeEvent ) => {
 
-		if( buf.length > 0 ) {
+		let code   = closeEvent.code
+		let reason = closeEvent.reason
+
+		if( buf.length > 0 && code == 1000 ) {
+
+			links.shift()
+			console.log( `${links.length} links left` )
+			if( links.length > 0 ) {
+  				console.log( `sending ${links[0]} `)
+  				ws.send( links[0] )
+  			}
 
 			let blob    = new Blob( buf, { type: 'video/mp4'} )
 			let blobURL = URL.createObjectURL( blob )
@@ -133,7 +137,6 @@ window.download = function( href, title ) {
   			element.click()
 
   			document.body.removeChild( element )
-
 		}
 		else {
 			alert( 'Sorry, an internal error occured while downloading the video.' )
@@ -168,6 +171,6 @@ function move( progress=0 ) {
 		bar.style.width = width
 	}
 	if( progress == 100) {
-		div.removeChild( wrapper )
+		imgDiv.removeChild( wrapper )
 	}
 }

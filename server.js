@@ -50,7 +50,7 @@ function initWS( ws ) {
 
 	ws.on( 'message', ( href ) => {
 
-		//let buf = Buffer.alloc(0)
+		console.log( `received ${href}`)
 
 		youtube( href )
 		.on( 'data', ( chunk ) => {
