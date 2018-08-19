@@ -13,6 +13,7 @@ const YT_BASE_URL  = "https://www.youtube.com/watch?v="
 const DOWNLOAD_URL = "/video_download/"
 const ICON_PATH    = path.resolve('./keeptube/icons/video.jpg')
 const VIDEO_PATH   = path.resolve('./test/video.mp4')
+const LOG_PATH		 = path.resolve('./test/log.txt')
 
 const server = https.createServer( options ).listen( 3000, () => console.log('Listening on port 3000') )
 
@@ -27,7 +28,7 @@ server.on( 'request', ( req, res ) => {
 	let status = '404'
 
 	if( params[1] === 'ICON' ) {
-
+		
 		resource = fs.createReadStream( ICON_PATH )
 	}
 
@@ -48,32 +49,56 @@ function initWS( ws ) {
 		console.log('connected!')
 	})
 
-	ws.on( 'message', ( href ) => {
+	ws.on( 'message', ( data ) => {
 
-		console.log( `received ${href}`)
+		//let buffer = []
 
-		youtube( href )
-		.on( 'data', ( chunk ) => {
-			//buf = Buffer.concat( [ buf, chunk ] )
-			ws.send( chunk )
-		})
-		.on( 'progress', ( curr, accum, total ) => {
-			
-			let acc = Math.trunc( accum*100/total )
-			let msg  = acc.toString() + "% downloaded"
-			let json = { acc: acc, total: total, msg: msg }
+		if( typeof data == 'string' )
+		{
+			let json  = JSON.parse( data )
+			let href  = json.message
+			let index = json.index
+			let list  = json.list
 
-			ws.send( JSON.stringify( json ) )
-		})
-		.on( 'end', () => {
-			//console.log( 'Video ready to send' )
-			//ws.send( buf )
-			console.log('closing connection')
-			ws.close( 1000, 'OK' )
-		})
-		.on( 'error', ( err ) => {
-			ws.close( 1002, 'Protocol Error' )
-		})
+			console.log( `received message ${data}` )
+
+			youtube( href )
+			.on( 'data', ( chunk ) => {
+
+				let bufIndex = ( list == 'true' ) ? index : 0
+				let indexBuf = Buffer.alloc( 1, bufIndex )
+				let buf = Buffer.concat( [ chunk, indexBuf ] )	
+
+				//buffer.push( chunk )
+
+				ws.send( buf )
+			})
+			.on( 'progress', ( curr, accum, total ) => {
+				
+				let acc = Math.trunc( accum*100/total )
+				let msg  = acc.toString() + "% downloaded"
+				let json = { acc: acc, total: total, msg: msg, index: index, list: list }
+
+				ws.send( JSON.stringify( json ) )
+			})
+			.on( 'end', () => {
+				console.log( `finished sending video at index ${index}`)
+
+				//fs.writeFileSync( VIDEO_PATH, buffer )
+				let bufIndex = ( list == 'true' ) ? index : 0;
+				let json = { acc: 0, total: 0, msg: 'resume', index: bufIndex, list: list }
+				
+				ws.send( JSON.stringify( json ) )
+			})
+			.on( 'error', ( err ) => {
+				ws.close( 1002, 'Protocol Error' )
+			})
+		}
+		else {
+			console.log( 'testing data')
+			fs.writeFileSync( VIDEO_PATH, data )
+		}
+
 	})
 
 	ws.on( 'close', ( status, reason ) => {
