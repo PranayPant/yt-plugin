@@ -1,9 +1,9 @@
 
 const CB_URL 		= "https://localhost:3000/"
 const YT_BASE_URL = "https://www.youtube.com/"
-const LOCATION    = window.location.href
 const LIST_AFFIX  = "playlist?"
 const VIDEO_AFFIX = "watch?v="
+const LOCATION    = window.location.href
 
 const IMG_DIV_SELECTOR 		  = "div#info-contents>.ytd-watch>.ytd-video-primary-info-renderer>div#info>div#menu-container>div#menu>.ytd-video-primary-info-renderer"
 const IMG_BAR_SELECTOR 		  = "div#info-contents.ytd-watch"
@@ -17,10 +17,6 @@ const LIST_BAR_DIV_SELECTOR  = "div#content.ytd-playlist-video-renderer"
 const LIST_IMG_STYLE 	  	  = "position:relative;width:10%;bottom:3%;height:60%;"
 const LIST_BAR_STYLE			  = "height:10px;width:90%;background-color:grey;margin-top:10%"
 const LIST_HREF_SELECTOR 	  = "div#contents.ytd-playlist-video-list-renderer a.ytd-playlist-video-renderer"
-
-let imgDivs = []
-let barDivs = []
-let bufs    = [ [] ]
 
 function getBufsLengths( arr=bufs ) {
 
@@ -196,7 +192,7 @@ window.handleDownload = function( parentNode, index ) {
 		
 		if( isMultiVidDwnld( parentNode ) ) {
 			
-			// appaendprogress bar to each div and init bufs
+			// append progress bar to each div and init bufs
 			bufs = []
 			barDivs.forEach( (d, i) => {
 				appendProgressBar( d )
@@ -282,8 +278,35 @@ window.handleDownload = function( parentNode, index ) {
 	})
 }
 
+let imgDivs = []
+let barDivs = []
+let bufs    = [ [] ]
+
 // Get div info
 barDivs = getBarDivs()
 imgDivs = getImgDivs()
 
 appendImgs()
+
+function reload() {
+
+	imgDivs = []
+	barDivs = []
+	bufs    = [ [] ]
+
+	// Get div info
+	barDivs = getBarDivs()
+	imgDivs = getImgDivs()
+
+	appendImgs()
+}
+
+// Poll to chekc for page change every 1 ms
+setInterval( () => {
+	console.log('set timeout')
+	if( LOCATION != window.location.href ) {
+		LOCATION = window.location.href
+		console.log('reloading to ' + LOCATION )
+		reload()
+	}
+}, 1)
